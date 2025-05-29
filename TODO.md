@@ -2,12 +2,12 @@
 
 ## MVP (Must-Have)
 
-- [ ] **Database & Entities**
+- [x] **Database & Entities**
   - Define `User` and `ChatMessage` JPA entities
   - Configure `application.properties` and verify connection to PostgreSQL
-- [ ] **Repositories**
+- [x] **Repositories**
   - Implement `UserRepository` and `ChatMessageRepository`
-- [ ] **WebSocket Setup**
+- [x] **WebSocket Setup**
   - Create `WebSocketConfig` for STOMP/SockJS endpoints
   - Implement `ChatController` and `ChatService` message flow
 - [ ] **Presence Tracking**
