@@ -8,20 +8,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Header: current user and logout
-    const header = document.createElement('header');
-    header.classList.add('chat-header');
-    header.innerHTML = `
-    Logged in as: <span id="currentUser">${username}</span>
-    <button id="logoutBtn">Logout</button>
-  `;
-    document.body.prepend(header);
+    // Display current user (static element in index.html)
+    const currentUserEl = document.getElementById('currentUser');
+    if (currentUserEl) {
+        currentUserEl.textContent = username;
+    }
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        sessionStorage.removeItem('username');
-        fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
-            .finally(() => window.location.href = 'login.html');
-    });
+    // Logout button (static in index.html)
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('username');
+            window.location.href = 'login.html';
+        });
+    }
 
     // DOM elements
     const usersList = document.getElementById('usersList');
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Request history
+        // Request chat history
         stompClient.send('/app/chat.history', {}, {});
     });
 
