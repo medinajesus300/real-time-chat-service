@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Populate current user (static in HTML)
+    // Update current user display
     const currentUserEl = document.getElementById('currentUser');
     if (currentUserEl) currentUserEl.textContent = username;
 
@@ -31,9 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const socket = new SockJS('/ws');
     const stompClient = Stomp.over(socket);
 
-    // Pass username as a CONNECT header for server to assign Principal
+    // Include username in CONNECT headers
     stompClient.connect({ username }, () => {
-        // Presence subscriptions
+        // Subscribe to presence updates
         stompClient.subscribe('/topic/presence', frame => {
             const users = JSON.parse(frame.body);
             usersList.innerHTML = users.map(u => {
@@ -41,9 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cls = u === username ? 'self' : '';
                 return `<li class="${cls}">${u}${me}</li>`;
             }).join('');
+            // Request current presence list
+            stompClient.send('/app/presence', {}, {});
         });
 
-        // Message subscriptions
+        // Subscribe to incoming messages
         stompClient.subscribe('/topic/messages', frame => {
             const payload = JSON.parse(frame.body);
             (Array.isArray(payload) ? payload : [payload]).forEach(msg => {
@@ -65,13 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Request history
+        // Request chat history
         stompClient.send('/app/chat.history', {}, {});
     }, error => {
         console.error('WebSocket connection error', error);
     });
 
-    // Send new message
+    // Send new messages
     messageForm.addEventListener('submit', e => {
         e.preventDefault();
         const content = messageInput.value.trim();
