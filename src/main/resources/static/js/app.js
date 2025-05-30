@@ -1,20 +1,18 @@
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Authenticate
+    // Check authentication
     const username = sessionStorage.getItem('username');
     if (!username) {
         window.location.href = 'login.html';
         return;
     }
 
-    // Display current user (static element in index.html)
+    // Populate current user (static in HTML)
     const currentUserEl = document.getElementById('currentUser');
-    if (currentUserEl) {
-        currentUserEl.textContent = username;
-    }
+    if (currentUserEl) currentUserEl.textContent = username;
 
-    // Logout button (static in index.html)
+    // Logout handler
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -23,18 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // DOM elements
+    // DOM references
     const usersList = document.getElementById('usersList');
     const messagesContainer = document.getElementById('messages');
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
 
-    // WebSocket connection
+    // Establish WebSocket connection
     const socket = new SockJS('/ws');
     const stompClient = Stomp.over(socket);
 
-    stompClient.connect({}, () => {
-        // Presence updates
+    // Pass username as a CONNECT header for server to assign Principal
+    stompClient.connect({ username }, () => {
+        // Presence subscriptions
         stompClient.subscribe('/topic/presence', frame => {
             const users = JSON.parse(frame.body);
             usersList.innerHTML = users.map(u => {
@@ -44,19 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
         });
 
-        // Incoming messages
+        // Message subscriptions
         stompClient.subscribe('/topic/messages', frame => {
             const payload = JSON.parse(frame.body);
             (Array.isArray(payload) ? payload : [payload]).forEach(msg => {
                 const msgDiv = document.createElement('div');
                 msgDiv.classList.add('message');
 
-                // Username span
                 const userEl = document.createElement('span');
                 userEl.classList.add('username');
                 userEl.textContent = msg.sender;
 
-                // Message content
                 const contentEl = document.createElement('span');
                 contentEl.classList.add('message-content');
                 const time = new Date(msg.timestamp).toLocaleTimeString();
@@ -68,20 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Request chat history
+        // Request history
         stompClient.send('/app/chat.history', {}, {});
+    }, error => {
+        console.error('WebSocket connection error', error);
     });
 
-    // Send messages
+    // Send new message
     messageForm.addEventListener('submit', e => {
         e.preventDefault();
         const content = messageInput.value.trim();
         if (!content) return;
-        stompClient.send(
-            '/app/chat.send',
-            {},
-            JSON.stringify({ sender: username, content })
-        );
+        stompClient.send('/app/chat.send', {}, JSON.stringify({ sender: username, content }));
         messageInput.value = '';
     });
 });
