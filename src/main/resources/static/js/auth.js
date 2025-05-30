@@ -1,3 +1,6 @@
+
+// Handles login and registration, including session cookie and username storage
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -12,9 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',          // include session cookie
                     body: JSON.stringify({ username, password })
                 });
                 if (res.ok) {
+                    sessionStorage.setItem('username', username);  // store for app.js
                     window.location.href = 'index.html';
                 } else {
                     const msg = await res.text();
@@ -37,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',          // include cookie for consistency
                     body: JSON.stringify({ username, password })
                 });
                 if (res.ok) {
