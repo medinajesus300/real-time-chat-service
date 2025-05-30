@@ -1,6 +1,8 @@
 package com.medina.chat_service.event;
 
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
@@ -12,7 +14,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Tracks user presence (online/offline) and broadcasts updates.
+ * Tracks user presence and provides presence list to subscribers.
  */
 @Component
 public class PresenceEventListener {
@@ -25,7 +27,7 @@ public class PresenceEventListener {
     }
 
     /**
-     * Handle new WebSocket connections and notify subscribers.
+     * Handle new connections: add user and broadcast updated presence.
      */
     @EventListener
     public void handleSessionConnected(SessionConnectEvent event) {
@@ -38,7 +40,7 @@ public class PresenceEventListener {
     }
 
     /**
-     * Handle WebSocket disconnections and notify subscribers.
+     * Handle disconnections: remove user and broadcast updated presence.
      */
     @EventListener
     public void handleSessionDisconnect(SessionDisconnectEvent event) {
@@ -49,5 +51,17 @@ public class PresenceEventListener {
             messagingTemplate.convertAndSend("/topic/presence", onlineUsers);
         }
     }
+
+    /**
+     * Provide current presence list on demand.
+     * Invoked when client sends to /app/presence.
+     */
+    @MessageMapping("/presence")
+    @SendTo("/topic/presence")
+    public Set<String> sendPresence() {
+        return onlineUsers;
+    }
+
+
 
 }
