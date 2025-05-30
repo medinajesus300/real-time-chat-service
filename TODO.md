@@ -12,9 +12,9 @@
   - Implement `ChatController` and `ChatService` message flow
 - [ ] **Presence Tracking**
   - Build `PresenceEventListener` to broadcast online/offline users
-- [ ] **Authentication & Registration**
+- [x] **Authentication & Registration**
   - Implement `AuthController`, `UserService`, and session-based login/register
-- [ ] **Frontend Demo**
+- [x] **Frontend Demo**
   - Create `index.html` with SockJS + Stomp.js integration
   - Display message list, input box, and online user sidebar
 
