@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication
     const username = sessionStorage.getItem('username');
     if (!username) {
         window.location.href = 'login.html';
         return;
     }
 
-    // Update current user display
+    // Display the current user
     const currentUserEl = document.getElementById('currentUser');
     if (currentUserEl) currentUserEl.textContent = username;
 
-    // Logout handler
+    // Handle logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -25,53 +24,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
 
-    // Establish WebSocket connection
+    // Helper to render a single message
+    function renderMessage(msg) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('message');
+
+        const userSpan = document.createElement('span');
+        userSpan.classList.add('username');
+        userSpan.textContent = msg.sender;
+
+        const contentSpan = document.createElement('span');
+        contentSpan.classList.add('message-content');
+        contentSpan.textContent = ` [${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.content}`;
+
+        wrapper.append(userSpan, contentSpan);
+        messagesContainer.appendChild(wrapper);
+    }
+
+    // Establish the WebSocket connection
     const socket = new SockJS('/ws');
     const stompClient = Stomp.over(socket);
 
-    // Include username in CONNECT headers
     stompClient.connect({ username }, () => {
-        // Subscribe to presence updates
-        stompClient.subscribe('/topic/presence', frame => {
-            const users = JSON.parse(frame.body);
-            usersList.innerHTML = users.map(u => {
-                const me = u === username ? ' (You)' : '';
-                const cls = u === username ? 'self' : '';
-                return `<li class="${cls}">${u}${me}</li>`;
-            }).join('');
+        // 1. Subscribe to personal history queue and request history
+        stompClient.subscribe('/user/queue/history', frame => {
+            const history = JSON.parse(frame.body);
+            messagesContainer.innerHTML = ''; // Clear existing messages
+            history.forEach(msg => renderMessage(msg));
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         });
-        // Immediately request current presence list
-        stompClient.send('/app/presence', {}, {});
+        stompClient.send('/app/chat.history', {}, {});
 
-        // Subscribe to incoming messages
+        // 2. Subscribe to broadcasted messages
         stompClient.subscribe('/topic/messages', frame => {
             const payload = JSON.parse(frame.body);
-            (Array.isArray(payload) ? payload : [payload]).forEach(msg => {
-                const msgDiv = document.createElement('div');
-                msgDiv.classList.add('message');
-
-                const userEl = document.createElement('span');
-                userEl.classList.add('username');
-                userEl.textContent = msg.sender;
-
-                const contentEl = document.createElement('span');
-                contentEl.classList.add('message-content');
-                const time = new Date(msg.timestamp).toLocaleTimeString();
-                contentEl.textContent = ` [${time}] ${msg.content}`;
-
-                msgDiv.append(userEl, contentEl);
-                messagesContainer.appendChild(msgDiv);
+            const messages = Array.isArray(payload) ? payload : [payload];
+            messages.forEach(msg => {
+                renderMessage(msg);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
         });
 
-        // Request chat history
-        stompClient.send('/app/chat.history', {}, {});
-    }, error => {
-        console.error('WebSocket connection error', error);
+        // 3. Subscribe to presence updates
+        stompClient.subscribe('/topic/presence', frame => {
+            const users = JSON.parse(frame.body);
+            usersList.innerHTML = users
+                .map(u => `<li class="${u === username ? 'self' : ''}">${u}${u === username ? ' (You)' : ''}</li>`)
+                .join('');
+        });
+        stompClient.send('/app/presence', {}, {});
     });
 
-    // Send new messages
+    // Handle sending a new message
     messageForm.addEventListener('submit', e => {
         e.preventDefault();
         const content = messageInput.value.trim();
