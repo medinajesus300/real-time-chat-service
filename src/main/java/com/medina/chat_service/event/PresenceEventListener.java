@@ -5,7 +5,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.stereotype.Component;
+//import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Tracks user presence and provides presence list to subscribers.
  */
-@Component
+@Controller
 public class PresenceEventListener {
 
     private final SimpMessagingTemplate messagingTemplate;
