@@ -5,7 +5,7 @@ import com.medina.chat_service.model.ChatMessage;
 import com.medina.chat_service.service.ChatService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
+
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -27,7 +27,6 @@ public class ChatController {
      * Handle incoming chat messages: persist and broadcast.
      */
     @MessageMapping("/chat.send")
-    @SendTo("/topic/messages")
     public ChatMessageDto sendMessage(@Payload ChatMessageDto dto) {
         ChatMessage saved = chatService.sendMessage(dto.getSender(), dto.getContent());
         return new ChatMessageDto(
@@ -41,7 +40,6 @@ public class ChatController {
      * Fetch recent chat history on subscription.
      */
     @MessageMapping("/chat.history")
-    @SendTo("/topic/messages")
     public List<ChatMessageDto> fetchHistory() {
         return chatService.fetchHistory().stream()
                 .map(msg -> new ChatMessageDto(
