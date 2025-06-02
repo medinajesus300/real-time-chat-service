@@ -1,5 +1,3 @@
-
-
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
     const username = sessionStorage.getItem('username');
@@ -41,9 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cls = u === username ? 'self' : '';
                 return `<li class="${cls}">${u}${me}</li>`;
             }).join('');
-            // Request current presence list
-            stompClient.send('/app/presence', {}, {});
         });
+        // Immediately request current presence list
+        stompClient.send('/app/presence', {}, {});
 
         // Subscribe to incoming messages
         stompClient.subscribe('/topic/messages', frame => {
