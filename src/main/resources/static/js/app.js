@@ -1,5 +1,4 @@
-// app.js
-// Refined chat logic: ensure history renders once and avoid duplicates
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const username = sessionStorage.getItem('username');
@@ -8,11 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Display the current user
+    // Display current user
     const currentUserEl = document.getElementById('currentUser');
     if (currentUserEl) currentUserEl.textContent = username;
 
-    // Handle logout
+    // Logout handler
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -45,26 +44,25 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesContainer.appendChild(wrapper);
     }
 
-    // Establish the WebSocket connection
+    // Establish WebSocket connection
     const socket = new SockJS('/ws');
     const stompClient = Stomp.over(socket);
 
     stompClient.connect({ username }, () => {
-        // 1. Subscribe to personal history queue
+        // Subscribe to personal history queue
         stompClient.subscribe('/user/queue/history', frame => {
             const history = JSON.parse(frame.body);
-            // Clear existing messages once
+            // Clear existing messages
             messagesContainer.innerHTML = '';
             history.forEach(msg => renderMessage(msg));
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         });
-        // Request history after subscription is active
+        // Request history
         stompClient.send('/app/chat.history', {}, {});
 
-        // 2. Subscribe to broadcasted messages
+        // Subscribe to broadcasted messages
         stompClient.subscribe('/topic/messages', frame => {
             const payload = JSON.parse(frame.body);
-            // Only new messages should be processed here
             const messages = Array.isArray(payload) ? payload : [payload];
             messages.forEach(msg => {
                 renderMessage(msg);
@@ -72,18 +70,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 3. Subscribe to presence updates
+        // Subscribe to presence updates
         stompClient.subscribe('/topic/presence', frame => {
             const users = JSON.parse(frame.body);
             usersList.innerHTML = users
                 .map(u => `<li class="${u === username ? 'self' : ''}">${u}${u === username ? ' (You)' : ''}</li>`)
                 .join('');
         });
-        // Request current presence list
+        // Request presence list
         stompClient.send('/app/presence', {}, {});
     });
 
-    // Handle sending a new message
+    // Send new messages
     messageForm.addEventListener('submit', e => {
         e.preventDefault();
         const content = messageInput.value.trim();
@@ -92,5 +90,4 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.value = '';
     });
 });
-
 
