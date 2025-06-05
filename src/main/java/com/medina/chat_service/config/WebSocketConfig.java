@@ -36,7 +36,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config
                 .setApplicationDestinationPrefixes("/app")  // Client messages prefix
-                .enableSimpleBroker("/topic");             // In-memory broker for pub/sub
+                .setUserDestinationPrefix("/user")         // Prefix for user-specific destinations
+                .enableSimpleBroker("/topic", "/queue");  // In-memory broker for pub/sub and user queues
     }
 
     @Override
@@ -60,4 +61,3 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 
 }
-
