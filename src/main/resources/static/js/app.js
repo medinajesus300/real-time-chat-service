@@ -1,3 +1,6 @@
+// app.js
+// Refined chat logic: ensure history renders once and avoid duplicates
+
 document.addEventListener('DOMContentLoaded', () => {
     const username = sessionStorage.getItem('username');
     if (!username) {
@@ -28,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMessage(msg) {
         const wrapper = document.createElement('div');
         wrapper.classList.add('message');
+        if (msg.sender === 'System') wrapper.classList.add('system');
 
         const userSpan = document.createElement('span');
         userSpan.classList.add('username');
@@ -46,18 +50,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const stompClient = Stomp.over(socket);
 
     stompClient.connect({ username }, () => {
-        // 1. Subscribe to personal history queue and request history
+        // 1. Subscribe to personal history queue
         stompClient.subscribe('/user/queue/history', frame => {
             const history = JSON.parse(frame.body);
-            messagesContainer.innerHTML = ''; // Clear existing messages
+            // Clear existing messages once
+            messagesContainer.innerHTML = '';
             history.forEach(msg => renderMessage(msg));
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         });
+        // Request history after subscription is active
         stompClient.send('/app/chat.history', {}, {});
 
         // 2. Subscribe to broadcasted messages
         stompClient.subscribe('/topic/messages', frame => {
             const payload = JSON.parse(frame.body);
+            // Only new messages should be processed here
             const messages = Array.isArray(payload) ? payload : [payload];
             messages.forEach(msg => {
                 renderMessage(msg);
@@ -72,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(u => `<li class="${u === username ? 'self' : ''}">${u}${u === username ? ' (You)' : ''}</li>`)
                 .join('');
         });
+        // Request current presence list
         stompClient.send('/app/presence', {}, {});
     });
 
