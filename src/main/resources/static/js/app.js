@@ -1,3 +1,6 @@
+// app.js
+// Refined chat logic: show system join/leave messages and avoid duplicate history
+
 document.addEventListener('DOMContentLoaded', () => {
     const username = sessionStorage.getItem('username');
     if (!username) {
@@ -28,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMessage(msg) {
         const wrapper = document.createElement('div');
         wrapper.classList.add('message');
+        if (msg.sender === 'System') {
+            wrapper.classList.add('system');
+        }
 
         const userSpan = document.createElement('span');
         userSpan.classList.add('username');
@@ -65,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 3. Subscribe to presence updates
+        // 3. Subscribe to presence updates and send join/leave messages automatically handled server-side
         stompClient.subscribe('/topic/presence', frame => {
             const users = JSON.parse(frame.body);
             usersList.innerHTML = users
@@ -85,4 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-
+// Git Workflow Reminder:
+// git add src/main/resources/static/js/app.js
+// git commit -m "Update app.js to render system join/leave messages"
+// git push origin main
