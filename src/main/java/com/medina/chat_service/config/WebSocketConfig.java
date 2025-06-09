@@ -29,15 +29,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry
                 .addEndpoint("/ws")                  // WebSocket handshake endpoint
                 .setAllowedOriginPatterns("*")       // Allow all origins; tighten in prod
-                .withSockJS();                         // Fallback options for non-WebSocket clients
+                .withSockJS();                        // Fallback for non-WebSocket browsers
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config
-                .setApplicationDestinationPrefixes("/app")  // Client messages prefix
-                .setUserDestinationPrefix("/user")         // Prefix for user-specific destinations
-                .enableSimpleBroker("/topic", "/queue");  // In-memory broker for pub/sub and user queues
+        // Prefix for messages sent from client to @MessageMapping methods
+        config.setApplicationDestinationPrefixes("/app")
+                // Prefix for user‑specific destinations (convertAndSendToUser)
+                .setUserDestinationPrefix("/user");
+
+        // In‑memory simple broker handles broadcasts (/topic) and private queues (/queue)
+        config.enableSimpleBroker("/topic", "/queue");
     }
 
     @Override
@@ -49,7 +52,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
                 if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String username = accessor.getFirstNativeHeader("username");
-                    if (username != null) {
+                    if (username != null && !username.isBlank()) {
                         Principal user = new UsernamePasswordAuthenticationToken(username, null);
                         accessor.setUser(user);
                     }
@@ -58,6 +61,4 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             }
         });
     }
-
-
 }
