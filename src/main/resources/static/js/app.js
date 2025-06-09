@@ -1,5 +1,3 @@
-
-
 document.addEventListener('DOMContentLoaded', () => {
     const username = sessionStorage.getItem('username');
     if (!username) {
@@ -7,12 +5,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Display current user
+    /* --------------------------------------------------
+     * Cached DOM refs
+     * -------------------------------------------------- */
     const currentUserEl = document.getElementById('currentUser');
-    if (currentUserEl) currentUserEl.textContent = username;
+    const logoutBtn     = document.getElementById('logoutBtn');
+    const usersList     = document.getElementById('usersList');
+    const messagesWrap  = document.getElementById('messages');
+    const messageForm   = document.getElementById('messageForm');
+    const messageInput  = document.getElementById('messageInput');
 
-    // Logout handler
-    const logoutBtn = document.getElementById('logoutBtn');
+    if (currentUserEl) currentUserEl.textContent = username;
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             sessionStorage.removeItem('username');
@@ -20,68 +23,86 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // DOM references
-    const usersList = document.getElementById('usersList');
-    const messagesContainer = document.getElementById('messages');
-    const messageForm = document.getElementById('messageForm');
-    const messageInput = document.getElementById('messageInput');
+    /* --------------------------------------------------
+     * Deduplication helpers (just in case)
+     * -------------------------------------------------- */
+    const seen = new Set();
+    const msgKey = m => `${m.sender}-${m.timestamp}-${m.content}`;
 
-    // Helper to render a single message
-    function renderMessage(msg) {
+    function resetSeen() {
+        seen.clear();
+    }
+
+    /* --------------------------------------------------
+     * Render helpers
+     * -------------------------------------------------- */
+    function renderMessage(m) {
+        // Avoid duplicates that could still slip in
+        const key = msgKey(m);
+        if (seen.has(key)) return;
+        seen.add(key);
+
         const wrapper = document.createElement('div');
         wrapper.classList.add('message');
-        if (msg.sender === 'System') wrapper.classList.add('system');
+        if (m.sender === 'System') wrapper.classList.add('system');
 
         const userSpan = document.createElement('span');
         userSpan.classList.add('username');
-        userSpan.textContent = msg.sender;
+        userSpan.textContent = m.sender;
 
         const contentSpan = document.createElement('span');
         contentSpan.classList.add('message-content');
-        contentSpan.textContent = ` [${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.content}`;
+        contentSpan.textContent = ` [${new Date(m.timestamp).toLocaleTimeString()}] ${m.content}`;
 
         wrapper.append(userSpan, contentSpan);
-        messagesContainer.appendChild(wrapper);
+        messagesWrap.appendChild(wrapper);
     }
 
-    // Establish WebSocket connection
-    const socket = new SockJS('/ws');
-    const stompClient = Stomp.over(socket);
+    function scrollToBottom() {
+        messagesWrap.scrollTop = messagesWrap.scrollHeight;
+    }
+
+    /* --------------------------------------------------
+     * WebSocket / STOMP setup
+     * -------------------------------------------------- */
+    const socket       = new SockJS('/ws');
+    const stompClient  = Stomp.over(socket);
 
     stompClient.connect({ username }, () => {
-        // Subscribe to personal history queue
+        /* ------------- History (private queue) ------------- */
         stompClient.subscribe('/user/queue/history', frame => {
             const history = JSON.parse(frame.body);
-            // Clear existing messages
-            messagesContainer.innerHTML = '';
-            history.forEach(msg => renderMessage(msg));
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messagesWrap.innerHTML = '';
+            resetSeen();
+            history.forEach(renderMessage);
+            scrollToBottom();
         });
-        // Request history
-        stompClient.send('/app/chat.history', {}, {});
 
-        // Subscribe to broadcasted messages
+        stompClient.send('/app/chat.history', {}, {}); // request history
+
+        /* ------------- Live broadcast ------------- */
         stompClient.subscribe('/topic/messages', frame => {
-            const payload = JSON.parse(frame.body);
+            const payload  = JSON.parse(frame.body);
             const messages = Array.isArray(payload) ? payload : [payload];
-            messages.forEach(msg => {
-                renderMessage(msg);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messages.forEach(m => {
+                renderMessage(m);
+                scrollToBottom();
             });
         });
 
-        // Subscribe to presence updates
+        /* ------------- Presence ------------- */
         stompClient.subscribe('/topic/presence', frame => {
             const users = JSON.parse(frame.body);
             usersList.innerHTML = users
                 .map(u => `<li class="${u === username ? 'self' : ''}">${u}${u === username ? ' (You)' : ''}</li>`)
                 .join('');
         });
-        // Request presence list
-        stompClient.send('/app/presence', {}, {});
+        stompClient.send('/app/presence', {}, {}); // request list
     });
 
-    // Send new messages
+    /* --------------------------------------------------
+     * Send a new chat message
+     * -------------------------------------------------- */
     messageForm.addEventListener('submit', e => {
         e.preventDefault();
         const content = messageInput.value.trim();
@@ -90,4 +111,3 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.value = '';
     });
 });
-
